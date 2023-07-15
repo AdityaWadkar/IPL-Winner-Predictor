@@ -19,7 +19,7 @@ Whether you're a cricket fanatic, a data enthusiast, or simply curious about the
 
 **Scripting Language:** Python
 
-**hosting partner:** Steramlit
+**hosting partner:** Streamlit
 
 ## 📑 Project Summary
 ### The project consists of the following steps:
