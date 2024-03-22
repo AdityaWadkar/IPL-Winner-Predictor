@@ -90,23 +90,26 @@ with col3:
     wickets = st.number_input("wicktes down")
 
 if st.button('Predict Winning Probability'):
-    runs_left = target - score
-    balls_left = 120 - (overs*6)
-    wickets = 10-wickets
-    crr = score/overs
-    rrr = runs_left/(balls_left/6)
-
-    input_data = pd.DataFrame({'batting_team':[batting_team],'bowling_team':[bowling_team],
-                     'city':[seleted_city],'runs_left':[runs_left],'balls_left':[balls_left],
-                     'wickets_remaining':[wickets],'total_runs_x':[target],'crr':[crr],'rrr':[rrr]})
-   
+    try:
+        runs_left = target - score
+        balls_left = 120 - (overs*6)
+        wickets = 10-wickets
+        crr = score/overs
+        rrr = runs_left/(balls_left/6)
     
-    result = pipe.predict_proba(input_data)
-
-    loss = result[0][0]
-    win =  result[0][1]
-    st.header(batting_team + " = "+str(round(win*100)) + "%")
-    st.header(bowling_team + " = "+str(round(loss*100)) + "%")
+        input_data = pd.DataFrame({'batting_team':[batting_team],'bowling_team':[bowling_team],
+                         'city':[seleted_city],'runs_left':[runs_left],'balls_left':[balls_left],
+                         'wickets_remaining':[wickets],'total_runs_x':[target],'crr':[crr],'rrr':[rrr]})
+       
+        
+        result = pipe.predict_proba(input_data)
+    
+        loss = result[0][0]
+        win =  result[0][1]
+        st.header(batting_team + " = "+str(round(win*100)) + "%")
+        st.header(bowling_team + " = "+str(round(loss*100)) + "%")
+    except:
+        st.header("Some error occured.. Please check you inputs !!")
 
 
 
