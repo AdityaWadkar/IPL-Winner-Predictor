@@ -1,0 +1,9 @@
+streamlit
+scikit-learn
+pandas
+numpy
+plotly
+xgboost
+beautifulsoup4
+requests
+matplotib

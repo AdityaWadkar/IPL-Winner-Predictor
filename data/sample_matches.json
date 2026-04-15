@@ -1,0 +1,272 @@
+[
+    {
+        "batting_team": "Punjab Kings",
+        "bowling_team": "Royal Challengers Bengaluru",
+        "target": 206,
+        "score": 156,
+        "wickets": 5,
+        "overs": "15.1",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Rajasthan Royals",
+        "target": 102,
+        "score": 65,
+        "wickets": 6,
+        "overs": "14.5",
+        "venue": "Durban"
+    },
+    {
+        "batting_team": "Rajasthan Royals",
+        "bowling_team": "Mumbai Indians",
+        "target": 146,
+        "score": 11,
+        "wickets": 0,
+        "overs": "2.3",
+        "venue": "Jaipur"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Royal Challengers Bengaluru",
+        "target": 116,
+        "score": 100,
+        "wickets": 4,
+        "overs": "16.5",
+        "venue": "Ranchi"
+    },
+    {
+        "batting_team": "Chennai Super Kings",
+        "bowling_team": "Mumbai Indians",
+        "target": 171,
+        "score": 133,
+        "wickets": 8,
+        "overs": "15.5",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Chennai Super Kings",
+        "bowling_team": "Royal Challengers Bengaluru",
+        "target": 197,
+        "score": 30,
+        "wickets": 3,
+        "overs": "6.0",
+        "venue": "Chennai"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Punjab Kings",
+        "target": 119,
+        "score": 2,
+        "wickets": 0,
+        "overs": "1.2",
+        "venue": "Delhi"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Royal Challengers Bengaluru",
+        "target": 184,
+        "score": 170,
+        "wickets": 6,
+        "overs": "19.2",
+        "venue": "Delhi"
+    },
+    {
+        "batting_team": "Rajasthan Royals",
+        "bowling_team": "Kolkata Knight Riders",
+        "target": 170,
+        "score": 75,
+        "wickets": 1,
+        "overs": "9.1",
+        "venue": "Kolkata"
+    },
+    {
+        "batting_team": "Royal Challengers Bengaluru",
+        "bowling_team": "Kolkata Knight Riders",
+        "target": 201,
+        "score": 176,
+        "wickets": 8,
+        "overs": "19.4",
+        "venue": "Bengaluru"
+    },
+    {
+        "batting_team": "Royal Challengers Bengaluru",
+        "bowling_team": "Mumbai Indians",
+        "target": 192,
+        "score": 71,
+        "wickets": 3,
+        "overs": "10.2",
+        "venue": "Bangalore"
+    },
+    {
+        "batting_team": "Chennai Super Kings",
+        "bowling_team": "Punjab Kings",
+        "target": 113,
+        "score": 51,
+        "wickets": 1,
+        "overs": "7.4",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Punjab Kings",
+        "target": 137,
+        "score": 35,
+        "wickets": 2,
+        "overs": "4.3",
+        "venue": "Delhi"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Punjab Kings",
+        "target": 202,
+        "score": 7,
+        "wickets": 0,
+        "overs": "1.0",
+        "venue": "Kolkata"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Rajasthan Royals",
+        "target": 186,
+        "score": 105,
+        "wickets": 3,
+        "overs": "13.0",
+        "venue": "Jaipur"
+    },
+    {
+        "batting_team": "Gujarat Titans",
+        "bowling_team": "Punjab Kings",
+        "target": 190,
+        "score": 82,
+        "wickets": 1,
+        "overs": "8.3",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Rajasthan Royals",
+        "target": 190,
+        "score": 36,
+        "wickets": 2,
+        "overs": "4.4",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Punjab Kings",
+        "target": 168,
+        "score": 98,
+        "wickets": 6,
+        "overs": "12.5",
+        "venue": "Delhi"
+    },
+    {
+        "batting_team": "Punjab Kings",
+        "bowling_team": "Kolkata Knight Riders",
+        "target": 262,
+        "score": 73,
+        "wickets": 0,
+        "overs": "5.1",
+        "venue": "Kolkata"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Punjab Kings",
+        "target": 158,
+        "score": 17,
+        "wickets": 2,
+        "overs": "3.1",
+        "venue": "Chandigarh"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Punjab Kings",
+        "target": 125,
+        "score": 100,
+        "wickets": 2,
+        "overs": "14.2",
+        "venue": "Chandigarh"
+    },
+    {
+        "batting_team": "Mumbai Indians",
+        "bowling_team": "Royal Challengers Bengaluru",
+        "target": 236,
+        "score": 3,
+        "wickets": 0,
+        "overs": "0.2",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Mumbai Indians",
+        "bowling_team": "Kolkata Knight Riders",
+        "target": 134,
+        "score": 69,
+        "wickets": 1,
+        "overs": "8.5",
+        "venue": "Mumbai"
+    },
+    {
+        "batting_team": "Sunrisers Hyderabad",
+        "bowling_team": "Delhi Capitals",
+        "target": 160,
+        "score": 113,
+        "wickets": 4,
+        "overs": "15.3",
+        "venue": "Chennai"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Delhi Capitals",
+        "target": 128,
+        "score": 91,
+        "wickets": 4,
+        "overs": "13.4",
+        "venue": "Sharjah"
+    },
+    {
+        "batting_team": "Punjab Kings",
+        "bowling_team": "Sunrisers Hyderabad",
+        "target": 133,
+        "score": 102,
+        "wickets": 9,
+        "overs": "17.4",
+        "venue": "Hyderabad"
+    },
+    {
+        "batting_team": "Rajasthan Royals",
+        "bowling_team": "Kolkata Knight Riders",
+        "target": 148,
+        "score": 69,
+        "wickets": 4,
+        "overs": "9.5",
+        "venue": "Kolkata"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Chennai Super Kings",
+        "target": 224,
+        "score": 115,
+        "wickets": 5,
+        "overs": "14.5",
+        "venue": "Delhi"
+    },
+    {
+        "batting_team": "Delhi Capitals",
+        "bowling_team": "Rajasthan Royals",
+        "target": 192,
+        "score": 1,
+        "wickets": 0,
+        "overs": "0.3",
+        "venue": "Jaipur"
+    },
+    {
+        "batting_team": "Kolkata Knight Riders",
+        "bowling_team": "Punjab Kings",
+        "target": 124,
+        "score": 88,
+        "wickets": 4,
+        "overs": "12.1",
+        "venue": "Ahmedabad"
+    }
+]
