@@ -6,4 +6,4 @@ plotly
 xgboost
 beautifulsoup4
 requests
-matplotib
+matplotlib
