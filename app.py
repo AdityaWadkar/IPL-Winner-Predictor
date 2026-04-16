@@ -75,6 +75,10 @@ def initialize_state():
         st.session_state['app_mode'] = "🔵 Match Simulation"
     if 'current_sim_label' not in st.session_state:
         st.session_state['current_sim_label'] = "🔵 Manual Input / Simulation"
+    if 'available_matches' not in st.session_state:
+        st.session_state['available_matches'] = []
+    if 'selected_match_idx' not in st.session_state:
+        st.session_state['selected_match_idx'] = 0
 
 initialize_state()
 
@@ -154,8 +158,62 @@ h1, h2, h3, h4, h5, h6, .stMarkdown p {{
     border: 2px solid rgba(255,255,255,0.1);
 }}
 
-.team-a-bar {{ height: 100%; transition: width 0.5s ease; }}
-.team-b-bar {{ height: 100%; transition: width 0.5s ease; }}
+.scorecard-container {{
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(15px);
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 20px;
+    margin: 10px 0 25px 0;
+    font-family: 'Inter', sans-serif;
+}}
+.scorecard-header {{
+    font-size: 0.8rem;
+    color: #ffb800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}}
+.team-row {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}}
+.team-info {{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}}
+.team-name {{
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+}}
+.score-box {{
+    text-align: right;
+}}
+.score-main {{
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fbbf24;
+}}
+.score-overs {{
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-left: 5px;
+}}
+.match-footer {{
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    color: #fbbf24;
+    font-weight: 600;
+    font-size: 1rem;
+    text-align: center;
+}}
 </style>
 """
 
@@ -282,41 +340,121 @@ def load_sample_trigger():
         st.session_state['current_sim_label'] = "🎲 Random Situation from Dataset"
         st.session_state['predict_requested'] = False # Reset prediction on new data
 
+def render_scorecard(match):
+    """Renders a premium HTML scorecard in the UI."""
+    scores = match.get('scores_raw', [])
+    teams = match.get('teams', [])
+    
+    # Process scores for both teams
+    team_scores = []
+    for i, team in enumerate(teams):
+        # Find if this team has a score in the raw list
+        score_data = next((s for s in scores if team in s.get('inning', '')), None)
+        if score_data:
+            score_str = f"{score_data.get('r')}-{score_data.get('w')}"
+            overs_str = f"({score_data.get('o')})"
+        else:
+            score_str = "Yet to bat" if not match.get('match_ended') else "DNB"
+            overs_str = ""
+        team_scores.append({'name': team, 'score': score_str, 'overs': overs_str})
+
+    html = f"""
+    <div class="scorecard-container">
+        <div class="scorecard-header">
+            {match.get('date')} • {match.get('match_num')} • {match.get('venue')}
+        </div>
+        <div class="team-row">
+            <div class="team-info">
+                <div class="team-name">{team_scores[0]['name']}</div>
+            </div>
+            <div class="score-box">
+                <span class="score-main">{team_scores[0]['score']}</span>
+                <span class="score-overs">{team_scores[0]['overs']}</span>
+            </div>
+        </div>
+        <div class="team-row">
+            <div class="team-info">
+                <div class="team-name">{team_scores[1]['name']}</div>
+            </div>
+            <div class="score-box">
+                <span class="score-main">{team_scores[1]['score']}</span>
+                <span class="score-overs">{team_scores[1]['overs']}</span>
+            </div>
+        </div>
+        <div class="match-footer">
+            {match.get('status')}
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+def update_predictor_from_match(match):
+    """Populates the prediction form fields based on a specific match object."""
+    # CASE 1: MATCH COMPLETED
+    if match.get('match_ended'):
+        st.session_state['sync_msg'] = ("info", f"🏆 Match Completed! Check the final scorecard below.")
+        st.session_state['is_chase_active'] = False
+        return
+
+    # CASE 2: 1ST INNINGS (NOT STARTED OR IN PROGRESS)
+    if not match.get('is_second_innings'):
+        st.session_state['sync_msg'] = ("info", "🏏 1st Innings in progress. This simulator is optimized for run chases!")
+        st.session_state['is_chase_active'] = False
+        # Optional: update teams anyway
+        st.session_state['bat_team_val'] = TEAM_MAP.get(match['teams'][0], match['teams'][0])
+        st.session_state['bowl_team_val'] = TEAM_MAP.get(match['teams'][1], match['teams'][1])
+        return
+
+    # CASE 3: 2ND INNINGS (RUN CHASE) - POPULATE INPUTS
+    st.session_state['is_chase_active'] = True
+    st.session_state['bat_team_val'] = TEAM_MAP.get(match.get('current_batting_team'), match.get('current_batting_team'))
+    st.session_state['bowl_team_val'] = TEAM_MAP.get(match.get('current_bowling_team'), match.get('current_bowling_team'))
+    
+    sum_text = match['score_summary']
+    if 'Target' in sum_text:
+        target_match = re.search(r'(\d+)\s+Target', sum_text)
+        if target_match:
+            st.session_state['target_val'] = int(target_match.group(1))
+    
+    s_match = re.search(r'(\d+)-(\d+)\s+\(([\d.]+)\)', sum_text)
+    if s_match:
+        st.session_state['score_val'] = int(s_match.group(1))
+        st.session_state['wickets_val'] = int(s_match.group(2))
+        st.session_state['overs_val'] = str(s_match.group(3))
+    
+    scraped_v = match.get('venue', 'Unknown').split(',')[0].lower()
+    for v in all_venues:
+        if scraped_v in v.lower():
+            st.session_state['venue_val'] = v
+            break
+            
+    st.session_state['current_sim_label'] = f"🟢 Live Match: {match['title']}"
+    st.session_state['sync_msg'] = ("success", f"🔥 Data Synced! Target set: {st.session_state['target_val']}")
+
 def trigger_live_sync():
     matches = get_live_ipl_matches()
-    if matches:
-        second_inn = [m for m in matches if m.get('is_second_innings', False)]
-        if second_inn:
-            match = second_inn[0]
-            teams_part = match['title'].split(',')[0].split(' vs ')
-            if len(teams_part) == 2:
-                raw_bat = teams_part[0].strip()
-                raw_bowl = teams_part[1].strip()
-                st.session_state['bat_team_val'] = TEAM_MAP.get(raw_bat, raw_bat)
-                st.session_state['bowl_team_val'] = TEAM_MAP.get(raw_bowl, raw_bowl)
-            
-            sum_text = match['score_summary']
-            if 'Target' in sum_text:
-                st.session_state['target_val'] = int(re.search(r'(\d+)\s+Target', sum_text).group(1))
-            
-            s_match = re.search(r'(\d+)-(\d+)\s+\(([\d.]+)\)', sum_text)
-            if s_match:
-                st.session_state['score_val'] = int(s_match.group(1))
-                st.session_state['wickets_val'] = int(s_match.group(2))
-                st.session_state['overs_val'] = str(s_match.group(3))
-            
-            scraped_v = match.get('venue', 'Unknown').split(',')[0].lower()
-            for v in all_venues:
-                if scraped_v in v.lower():
-                    st.session_state['venue_val'] = v
-                    break
-            st.session_state['current_sim_label'] = f"🟢 Live Match: {match['title']}"
-            st.session_state['sync_msg'] = ("success", f"Synced Live Feed: {match['title']}")
-        else:
-            st.session_state['sync_msg'] = ("info", "Live match found but in 1st Innings. Results will appear during the chase.")
-    else:
-        st.session_state['sync_msg'] = ("warning", "No live IPL matches found on Cricbuzz currently.")
+    if not matches:
+        st.session_state['sync_msg'] = ("warning", "No live IPL matches found for today.")
+        return
+
+    st.session_state['available_matches'] = matches
+    st.session_state['selected_match_idx'] = 0 # Default to latest (first in list)
+    
+    match = matches[0]
+    st.session_state['last_synced_match'] = match
+    update_predictor_from_match(match)
     st.session_state['predict_requested'] = False
+
+def on_match_selection_change():
+    """Callback when the user selects a different match from the dropdown."""
+    # Find match by title in the available list
+    new_title = st.session_state['match_selector_key']
+    selected_match = next((m for m in st.session_state['available_matches'] if m['title'] == new_title), None)
+    
+    if selected_match:
+        st.session_state['last_synced_match'] = selected_match
+        update_predictor_from_match(selected_match)
+        st.session_state['predict_requested'] = False
 
 def auto_load_scenario():
     scenarios = get_categorized_scenarios()
@@ -326,7 +464,7 @@ def auto_load_scenario():
         load_scenario_from_library(scenarios[cat])
 
 # --- Logic Modules ---
-from notebooks.scraper import get_live_ipl_matches, get_mock_ipl_match
+from notebooks.scraper import get_live_ipl_matches
 
 def is_ipl_season():
     if "demo" in st.query_params: return True
@@ -335,23 +473,35 @@ def is_ipl_season():
 
 @st.cache_data
 def get_h2h_data(team1, team2):
+    if team1 == "--- select ---" or team2 == "--- select ---":
+        return None
     try:
-        df_raw = pd.read_csv('data/IPL data 2008-2025.csv', low_memory=False)
-        match_df = df_raw[['match_id', 'date', 'batting_team', 'bowling_team', 'match_won_by']].drop_duplicates('match_id')
-        t_map = {'Delhi Daredevils': 'Delhi Capitals', 'Kings XI Punjab': 'Punjab Kings', 
-                 'Royal Challengers Bangalore': 'Royal Challengers Bengaluru', 'Deccan Chargers': 'Sunrisers Hyderabad'}
-        match_df['batting_team'] = match_df['batting_team'].replace(t_map)
-        match_df['bowling_team'] = match_df['bowling_team'].replace(t_map)
-        match_df['match_won_by'] = match_df['match_won_by'].replace(t_map)
-        mask = ((match_df['batting_team'] == team1) & (match_df['bowling_team'] == team2)) | \
-               ((match_df['batting_team'] == team2) & (match_df['bowling_team'] == team1))
-        last_5 = match_df[mask].sort_values('date', ascending=False).head(5)
+        json_path = 'data/h2h_recent.json'
+        if not os.path.exists(json_path):
+            return None
+            
+        with open(json_path, 'r') as f:
+            h2h_db = json.load(f)
+            
+        # Get pair key (sorted alphabetically)
+        t1, t2 = sorted([team1, team2])
+        pair_key = f"{t1}_{t2}"
+        
+        matches = h2h_db.get(pair_key, [])
+        if not matches:
+            return None
+            
+        # Matches are already sorted by date desc in JSON
+        last_5 = matches[:5]
+        
         return {
-            'team1_wins': len(last_5[last_5['match_won_by'] == team1]),
-            'team2_wins': len(last_5[last_5['match_won_by'] == team2]),
-            'matches': last_5[['date', 'match_won_by']].to_dict('records')
+            'team1_wins': len([m for m in last_5 if m['winner'] == team1]),
+            'team2_wins': len([m for m in last_5 if m['winner'] == team2]),
+            'matches': [{'date': m['date'], 'match_won_by': m['winner']} for m in last_5]
         }
-    except: return None
+    except Exception as e:
+        print(f"H2H Error: {e}")
+        return None
 
 # --- UI Layout ---
 st.markdown(page_style, unsafe_allow_html=True)
@@ -365,7 +515,7 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 app_mode = st.sidebar.radio("MODE SELECTOR", 
-                           ["🔵 Match Simulation", "🟢 Live Match Sync"], 
+                           ["🟢 Live Match Sync","🔵 Match Simulation" ], 
                            key='app_mode_radio')
 
 st.markdown("<h1 style='text-align: center; color: white;'>🏏 IPL WIN PREDICTOR</h1>", unsafe_allow_html=True)
@@ -377,7 +527,7 @@ if app_mode == "🟢 Live Match Sync":
     if is_ipl_season():
         sc1, sc2, sc3 = st.columns([1, 2, 1])
         with sc2:
-            st.button("🔄 Sync Live Data from Cricbuzz", use_container_width=True, on_click=trigger_live_sync)
+            st.button("🔄 Sync Live Data from CricketAPI", use_container_width=True, on_click=trigger_live_sync)
             
         if 'sync_msg' in st.session_state:
             m_type, txt = st.session_state['sync_msg']
@@ -385,6 +535,27 @@ if app_mode == "🟢 Live Match Sync":
             elif m_type == "info": st.info(txt)
             elif m_type == "warning": st.warning(txt)
             del st.session_state['sync_msg']
+
+        # Double-Header Match Selector
+        if len(st.session_state.get('available_matches', [])) > 1:
+            match_titles = [m['title'] for m in st.session_state['available_matches']]
+            current_title = st.session_state.get('last_synced_match', {}).get('title', match_titles[0])
+            try:
+                default_idx = match_titles.index(current_title)
+            except:
+                default_idx = 0
+                
+            st.selectbox("🏏 Select Active Match", 
+                        options=match_titles, 
+                        index=default_idx,
+                        key='match_selector_key',
+                        on_change=on_match_selection_change)
+
+        # Render the scorecard if match data exists
+        if 'last_synced_match' in st.session_state:
+            render_scorecard(st.session_state['last_synced_match'])
+            if not st.session_state['last_synced_match'].get('is_second_innings') and not st.session_state['last_synced_match'].get('match_ended'):
+                st.info("💡 **Note:** This predictor is specifically built for run chases. Please wait for the 2nd innings to see win probabilities!")
     else:
         st.warning("IPL Season is currently inactive. Use Simulation Mode for testing!")
 
@@ -408,12 +579,21 @@ else:  # Match Simulation Mode
 
 st.write("---")
 
-# Active Simulation Label
+# Active Simulation Label Logic
 sim_label = st.session_state.get('current_sim_label', "🔵 Manual Input")
+
+# If we are in Live Mode but the label is still a simulation one, override it
+if app_mode == "🟢 Live Match Sync" and not sim_label.startswith("🟢"):
+    sim_label = "🟢 Waiting for Live Data..."
+elif app_mode == "🔵 Match Simulation" and sim_label.startswith("🟢"):
+    # If we switched back to simulation, reset if it was a live match
+    sim_label = "🔵 Manual Input"
+
 st.markdown(f"""
     <div style="background: rgba(255,255,255,0.1); border-left: 5px solid #fbbf24; padding: 10px 20px; border-radius: 5px; margin-bottom: 20px;">
         <span style="color: #fbbf24; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">ACTIVE CONTEXT</span><br>
         <span style="color: white; font-size: 1.2rem; font-weight: 500;">{sim_label}</span>
+        {"<br><span style='color: #9ca3af; font-size: 0.8rem;'>⚠️ API Delay: Data may be 1-2 overs behind real-time.</span>" if sim_label.startswith("🟢") and "Waiting" not in sim_label else ""}
     </div>
 """, unsafe_allow_html=True)
 

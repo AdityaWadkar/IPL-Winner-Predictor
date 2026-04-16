@@ -1,81 +1,111 @@
+import os
 import requests
-from bs4 import BeautifulSoup
 import re
+from datetime import datetime
+from dotenv import load_dotenv
 
 def get_live_ipl_matches():
-    url = "https://www.cricbuzz.com/cricket-match/live-scores"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
+    load_dotenv()
+    api_key = os.getenv('API_KEY')
+    if not api_key:
+        print("Error: API_KEY not found in environment.")
+        return []
+
+    url = f"https://api.cricapi.com/v1/currentMatches?apikey={api_key}&offset=0"
     
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
         
-        # Matches are usually inside cb-lv-main buckets
-        match_containers = soup.find_all('div', class_='cb-lv-main')
-        
+        if data.get('status') != 'success':
+            print(f"API Error: {data.get('reason', 'Unknown error')}")
+            return []
+            
+        matches = data.get('data', [])
         ipl_matches = []
         
-        for container in match_containers:
-            # Check if it's an IPL match
-            series_text = container.find('h2')
-            if not series_text: continue
+        from datetime import timedelta
+        now = datetime.now()
+        today_str = now.strftime("%Y-%m-%d")
+        yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        # Collect all IPL matches from today or yesterday
+        candidate_matches = []
+        for match in matches:
+            match_name = match.get('name', '')
+            match_date = match.get('date', '')
             
-            s_val = series_text.text.upper()
-            if "IPL" not in s_val and "INDIAN PREMIER LEAGUE" not in s_val:
-                continue
-            
-            # Extract individual matches in this series
-            matches = container.find_all('div', class_='cb-mtch-lst')
-            for m in matches:
-                header = m.find('h3', class_='cb-lv-scr-mtch-hdr')
-                if not header: continue
-                
-                title = header.text.strip()
-                link = "https://www.cricbuzz.com" + header.find('a')['href']
-                
-                # Extract score details
-                score_container = m.find('div', class_='cb-scr-wll-chf')
-                if not score_container: continue
-                
-                status_div = m.find('div', class_=re.compile(r'cb-text-(live|complete|upcoming)'))
-                status_text = status_div.text.strip() if status_div else "In Progress"
-                
-                # Check for 2nd innings indicators
-                summary = score_container.text.strip()
-                is_second_innings = "Target" in summary or "needs" in summary.lower()
-                
-                # Extract Venue (Usually in cb-lv-scr-mtch-hdr text or sibling)
-                venue = "Unknown"
-                venue_div = m.find('div', class_='cb-mtch-info-stds') # Possible class for city/venue
-                if not venue_div:
-                    # Fallback: check if it's in the title/summary
-                    venue_match = re.search(r'•\s+([^,]+),\s+([^,\n\r]+)', m.text)
-                    if venue_match:
-                        venue = f"{venue_match.group(2).strip()}, {venue_match.group(1).strip()}"
+            if "Indian Premier League" in match_name and match_date in [today_str, yesterday_str]:
+                candidate_matches.append(match)
 
+        # Sort candidate matches by dateTimeGMT (latest first)
+        candidate_matches.sort(key=lambda x: x.get('dateTimeGMT', ''), reverse=True)
+
+        for match in candidate_matches:
+                id = match.get('id')
+                title = match.get('name', '')
+                status = match.get('status', 'In Progress')
+                venue = match.get('venue', 'Unknown')
+                scores = match.get('score', [])
+                teams = match.get('teams', [])
+                match_ended = match.get('matchEnded', False)
+                
+                # Extracting Match Number (e.g., "24th Match")
+                match_num_search = re.search(r'(\d+(st|nd|rd|th)\s+Match)', match_name)
+                match_num = match_num_search.group(1) if match_num_search else ""
+                
+                is_second_innings = False
+                summary = ""
+                batting_team = None
+                bowling_team = None
+                
+                # Basic parsing for existing predictor logic
+                if len(scores) >= 2:
+                    is_second_innings = True
+                    target = scores[0].get('r', 0) + 1
+                    s1 = scores[1]
+                    summary = f"{s1.get('r')}-{s1.get('w')} ({s1.get('o')}) {target} Target"
+                    
+                    inning_name = s1.get('inning', '')
+                    for t in teams:
+                        if t in inning_name:
+                            batting_team = t
+                            bowling_team = teams[1] if teams[0] == t else teams[0]
+                            break
+                            
+                elif len(scores) == 1:
+                    s0 = scores[0]
+                    summary = f"{s0.get('r')}-{s0.get('w')} ({s0.get('o')})"
+                else:
+                    summary = "Details Pending"
+                
                 match_data = {
+                    "id": id,
                     "title": title,
-                    "status": status_text,
-                    "link": link,
+                    "match_num": match_num,
+                    "date": match_date,
+                    "status": status,
+                    "match_ended": match_ended,
                     "score_summary": summary,
                     "is_second_innings": is_second_innings,
-                    "venue": venue
+                    "venue": venue,
+                    "scores_raw": scores,
+                    "teams": teams
                 }
                 
+                if batting_team and bowling_team:
+                    match_data['current_batting_team'] = batting_team
+                    match_data['current_bowling_team'] = bowling_team
+                    
                 ipl_matches.append(match_data)
                 
         return ipl_matches
     except Exception as e:
-        print(f"Error scraping Cricbuzz: {e}")
+        print(f"Error fetching API data: {e}")
         return []
 
 def parse_match_details(match_summary):
-    """
-    Parses a string like 'CSK 87-2 (7.4) KKR' into usable dict.
-    This is highly dependent on the text format.
-    """
     details = {
         "batting_team": None,
         "bowling_team": None,
@@ -84,10 +114,6 @@ def parse_match_details(match_summary):
         "overs": 0.0,
         "target": 0
     }
-    
-    # Try to extract score information using Regex
-    # Pattern: Team Name + digits-digits (digits.digits)
-    # Example: "CSK 87-2 (7.4)"
     score_match = re.search(r'([A-Za-z\s]+)\s+(\d+)[-/](\d+)\s+\(([\d.]+)\)', match_summary)
     
     if score_match:
@@ -97,15 +123,3 @@ def parse_match_details(match_summary):
         details["overs"] = float(score_match.group(4))
         
     return details
-
-# Mock data for testing when no live IPL is found
-def get_mock_ipl_match():
-    return [
-        {
-            "title": "Chennai Super Kings vs Kolkata Knight Riders, 22nd Match",
-            "status": "LIVE",
-            "score_summary": "CSK 148-3 (15.4) KKR 170 Target",
-            "link": "#",
-            "is_second_innings": True
-        }
-    ]

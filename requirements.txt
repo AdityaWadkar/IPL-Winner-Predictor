@@ -7,3 +7,4 @@ xgboost
 beautifulsoup4
 requests
 matplotlib
+python-dotenv
