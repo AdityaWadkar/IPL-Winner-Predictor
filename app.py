@@ -340,6 +340,24 @@ def load_sample_trigger():
         st.session_state['current_sim_label'] = "🎲 Random Situation from Dataset"
         st.session_state['predict_requested'] = False # Reset prediction on new data
 
+def get_ordinal(n):
+    """Returns the ordinal suffix (st, nd, rd, th) for a number."""
+    if 11 <= n % 100 <= 13:
+        return "th"
+    return {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+
+def format_match_date(date_str):
+    """Converts 'YYYY-MM-DD' to 'Day, DDth Month YYYY'."""
+    try:
+        dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+        day_name = dt.strftime("%a") # Thu
+        day_num = dt.day
+        month_name = dt.strftime("%B") # April
+        year = dt.year
+        return f"{day_name}, {day_num}{get_ordinal(day_num)} {month_name} {year}"
+    except:
+        return date_str
+
 def render_scorecard(match):
     """Renders a premium HTML scorecard in the UI."""
     scores = match.get('scores_raw', [])
@@ -351,17 +369,22 @@ def render_scorecard(match):
         # Find if this team has a score in the raw list
         score_data = next((s for s in scores if team in s.get('inning', '')), None)
         if score_data:
-            score_str = f"{score_data.get('r')}-{score_data.get('w')}"
-            overs_str = f"({score_data.get('o')})"
+            r = score_data.get('r', 0)
+            w = score_data.get('w', 0)
+            o = score_data.get('o', 0)
+            score_str = f"{r}-{w}"
+            overs_str = f"({o})"
         else:
             score_str = "Yet to bat" if not match.get('match_ended') else "DNB"
             overs_str = ""
         team_scores.append({'name': team, 'score': score_str, 'overs': overs_str})
 
+    formatted_date = format_match_date(match.get('date', ''))
+    
     html = f"""
     <div class="scorecard-container">
         <div class="scorecard-header">
-            {match.get('date')} • {match.get('match_num')} • {match.get('venue')}
+            {formatted_date} • {match.get('match_num')} • {match.get('venue')}
         </div>
         <div class="team-row">
             <div class="team-info">

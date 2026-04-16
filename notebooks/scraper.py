@@ -25,10 +25,14 @@ def get_live_ipl_matches():
         matches = data.get('data', [])
         ipl_matches = []
         
-        from datetime import timedelta
-        now = datetime.now()
-        today_str = now.strftime("%Y-%m-%d")
-        yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+        from datetime import timedelta, timezone
+        
+        # Define IST (India Standard Time) offset: UTC + 5:30
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
+        now_ist = datetime.now(ist_tz)
+        
+        today_str = now_ist.strftime("%Y-%m-%d")
+        yesterday_str = (now_ist - timedelta(days=1)).strftime("%Y-%m-%d")
         
         # Collect all IPL matches from today or yesterday
         candidate_matches = []
