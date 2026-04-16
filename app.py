@@ -15,7 +15,7 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
 
 # --- Configuration & Data ---
-st.set_page_config(page_title="Cricket Match Simulator", page_icon="🎮", layout="wide")
+st.set_page_config(page_title="Cricket Match Simulator", page_icon="🏏", layout="wide")
 
 teams = [
     "--- select ---",
