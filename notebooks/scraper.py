@@ -15,12 +15,17 @@ def get_live_ipl_matches():
     
     try:
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
+        
+        # If the API hits a 403 or other limit exception, capture that dynamically
+        if response.status_code != 200:
+            raise Exception(f"HTTP Error {response.status_code}: API might be rate-limited or unavailable.")
+            
         data = response.json()
         
+        # Free API limits often return 200 OK but with status: "failure" and a reason (e.g. "Monthly limit exceeded")
         if data.get('status') != 'success':
-            print(f"API Error: {data.get('reason', 'Unknown error')}")
-            return []
+            reason = data.get('reason', 'Unknown API Error')
+            raise Exception(f"CricketAPI Error: {reason}")
             
         matches = data.get('data', [])
         ipl_matches = []
@@ -49,6 +54,7 @@ def get_live_ipl_matches():
         for match in candidate_matches:
                 id = match.get('id')
                 title = match.get('name', '')
+                match_date = match.get('date', '')
                 status = match.get('status', 'In Progress')
                 venue = match.get('venue', 'Unknown')
                 scores = match.get('score', [])

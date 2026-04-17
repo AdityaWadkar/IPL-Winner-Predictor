@@ -56,6 +56,20 @@ TEAM_MAP = {
     'Deccan Chargers': 'Sunrisers Hyderabad'
 }
 
+# Load Global First Innings Models & Context
+try:
+    with open('models/first_innings_models.pkl', 'rb') as f:
+        first_innings_data = pickle.load(f)
+        first_innings_models = first_innings_data.get('models', {})
+except:
+    first_innings_models = {}
+
+try:
+    with open('data/context_stats.json', 'r') as f:
+        context_stats = json.load(f)
+except:
+    context_stats = {}
+
 # --- State Management ---
 def initialize_state():
     default_vals = {
@@ -381,6 +395,18 @@ def render_scorecard(match):
 
     formatted_date = format_match_date(match.get('date', ''))
     
+    # Check if we should predict first innings score
+    prediction_html = ""
+    if not match.get('is_second_innings') and not match.get('match_ended'):
+        pred_data = predict_first_innings_score(match)
+        if pred_data:
+            prediction_html = f"""
+            <div style='margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05);'>
+                <div style='color: #fbbf24; font-size: 1.1rem; font-weight: bold;'>✅ Expected Score: {pred_data['expected_score']}</div>
+                <div style='color: #94a3b8; font-size: 0.85rem; margin-top: 5px;'>Confidence: {pred_data['confidence']}</div>
+            </div>
+            """
+            
     html = f"""
     <div class="scorecard-container">
         <div class="scorecard-header">
@@ -407,9 +433,109 @@ def render_scorecard(match):
         <div class="match-footer">
             {match.get('status')}
         </div>
+        {prediction_html}
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
+
+def predict_first_innings_score(match):
+    """Predicts a bounded Expected Score during the First Innings using the Stacking Models."""
+    if not first_innings_models or not context_stats:
+        return None
+        
+    scores = match.get('scores_raw', [])
+    teams = match.get('teams', [])
+    if not teams or len(teams) < 2: return None
+    
+    batting_team = TEAM_MAP.get(teams[0], teams[0])
+    bowling_team = TEAM_MAP.get(teams[1], teams[1])
+    
+    score_data = next((s for s in scores if teams[0] in s.get('inning', '')), None)
+    if not score_data: return None
+    
+    try:
+        current_runs = float(score_data.get('r', 0))
+        wickets_lost = float(score_data.get('w', 0))
+        overs_played = float(score_data.get('o', 0.0))
+    except:
+        return None
+        
+    if overs_played < 2.0:
+        return None  # Too early for a reliable momentum prediction
+        
+    venue = match.get('venue', 'Unknown').split(',')[0].strip()
+    
+    overs_completed = overs_played
+    overs_remaining = 20.0 - overs_completed
+    wickets_in_hand = 10.0 - wickets_lost
+    current_run_rate = current_runs / overs_completed if overs_completed > 0 else 0.0
+    runs_last_3_overs = current_run_rate * min(3.0, overs_completed)
+    runs_last_over = current_run_rate * min(1.0, overs_completed)
+    
+    venue_avg = float(context_stats.get('venue_avg', {}).get(venue, context_stats.get('global_mean', 160.0)))
+    bat_avg = float(context_stats.get('bat_avg', {}).get(batting_team, context_stats.get('global_mean', 160.0)))
+    bowl_avg = float(context_stats.get('bowl_avg', {}).get(bowling_team, context_stats.get('global_mean', 160.0)))
+    
+    batting_strength = bat_avg / venue_avg if venue_avg else 1.0
+    bowling_strength = bowl_avg / venue_avg if venue_avg else 1.0
+    expected_score = (bat_avg + venue_avg) / 2.0
+    expected_remaining = max(0.0, expected_score - current_runs)
+    pressure_index = current_run_rate * wickets_lost
+
+    input_data = pd.DataFrame([{
+        'batting_team': batting_team,
+        'bowling_team': bowling_team,
+        'venue': venue,
+        'current_runs': current_runs,
+        'overs_completed': overs_completed,
+        'overs_remaining': overs_remaining,
+        'wickets_lost': wickets_lost,
+        'wickets_in_hand': wickets_in_hand,
+        'current_run_rate': current_run_rate,
+        'runs_last_3_overs': runs_last_3_overs,
+        'runs_last_over': runs_last_over,
+        'venue_avg': venue_avg,
+        'bat_avg': bat_avg,
+        'bowl_avg': bowl_avg,
+        'batting_strength': batting_strength,
+        'bowling_strength': bowling_strength,
+        'expected_score': expected_score,
+        'expected_remaining': expected_remaining,
+        'pressure_index': pressure_index
+    }])
+    
+    if overs_completed <= 6:
+        model = first_innings_models.get('powerplay')
+        mae = 32
+        input_data = input_data.drop(columns=['runs_last_3_overs'], errors='ignore')
+    elif overs_completed <= 15:
+        model = first_innings_models.get('middle')
+        mae = 23
+    else:
+        model = first_innings_models.get('death')
+        mae = 6
+        
+    if not model: return None
+    
+    try:
+        pred_rem = model.predict(input_data)[0]
+        final_pred = int(current_runs + pred_rem)
+        
+        # Apply safety limits
+        lower_bound = max(current_runs, final_pred - mae)
+        upper_bound = min(300, final_pred + mae)
+        
+        if mae > 25: conf = "Low"
+        elif mae >= 15: conf = "Medium"
+        else: conf = "High"
+        
+        return {
+            'expected_score': f"{int(lower_bound)} - {int(upper_bound)}",
+            'confidence': conf
+        }
+    except Exception as e:
+        print(f"Prediction Error: {e}")
+        return None
 
 def update_predictor_from_match(match):
     """Populates the prediction form fields based on a specific match object."""
@@ -455,18 +581,21 @@ def update_predictor_from_match(match):
     st.session_state['sync_msg'] = ("success", f"🔥 Data Synced! Target set: {st.session_state['target_val']}")
 
 def trigger_live_sync():
-    matches = get_live_ipl_matches()
-    if not matches:
-        st.session_state['sync_msg'] = ("warning", "No live IPL matches found for today.")
-        return
+    try:
+        matches = get_live_ipl_matches()
+        if not matches:
+            st.session_state['sync_msg'] = ("warning", "No live IPL matches found for today.")
+            return
 
-    st.session_state['available_matches'] = matches
-    st.session_state['selected_match_idx'] = 0 # Default to latest (first in list)
-    
-    match = matches[0]
-    st.session_state['last_synced_match'] = match
-    update_predictor_from_match(match)
-    st.session_state['predict_requested'] = False
+        st.session_state['available_matches'] = matches
+        st.session_state['selected_match_idx'] = 0 # Default to latest (first in list)
+        
+        match = matches[0]
+        st.session_state['last_synced_match'] = match
+        update_predictor_from_match(match)
+        st.session_state['predict_requested'] = False
+    except Exception as e:
+        st.session_state['sync_msg'] = ("warning", f"API Issue: {str(e)}")
 
 def on_match_selection_change():
     """Callback when the user selects a different match from the dropdown."""
