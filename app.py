@@ -403,6 +403,7 @@ def render_scorecard(match):
             prediction_html = f"""<div style='margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05);'>
 <div style='color: #fbbf24; font-size: 1.1rem; font-weight: bold;'>✅ Expected Score: {pred_data['expected_score']}</div>
 <div style='color: #94a3b8; font-size: 0.85rem; margin-top: 5px;'>Confidence: {pred_data['confidence']}</div>
+<div style='color: #fbbf24; font-size: 0.75rem; margin-top: 8px;font-weight: 660;'>⚠️ Note: Free API data may be delayed by 1-2 overs.</div>
 </div>"""
             
     html = f"""
