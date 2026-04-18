@@ -13,7 +13,7 @@ The **IPL Victory Predictor** is a highly advanced, dual-engine machine learning
 
 ## 🌟 Try It Live!
 You can test the application live on the cloud:
-👉 **[View the Live IPL Simulator App](https://ipl-winner-predictor-adityawadkar.streamlit.app/)**
+👉 **[View the Live IPL Simulator App](https://iplmind.streamlit.app/)**
 
 ---
 
