@@ -400,12 +400,10 @@ def render_scorecard(match):
     if not match.get('is_second_innings') and not match.get('match_ended'):
         pred_data = predict_first_innings_score(match)
         if pred_data:
-            prediction_html = f"""
-            <div style='margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05);'>
-                <div style='color: #fbbf24; font-size: 1.1rem; font-weight: bold;'>✅ Expected Score: {pred_data['expected_score']}</div>
-                <div style='color: #94a3b8; font-size: 0.85rem; margin-top: 5px;'>Confidence: {pred_data['confidence']}</div>
-            </div>
-            """
+            prediction_html = f"""<div style='margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05);'>
+<div style='color: #fbbf24; font-size: 1.1rem; font-weight: bold;'>✅ Expected Score: {pred_data['expected_score']}</div>
+<div style='color: #94a3b8; font-size: 0.85rem; margin-top: 5px;'>Confidence: {pred_data['confidence']}</div>
+</div>"""
             
     html = f"""
     <div class="scorecard-container">
@@ -521,9 +519,9 @@ def predict_first_innings_score(match):
         pred_rem = model.predict(input_data)[0]
         final_pred = int(current_runs + pred_rem)
         
-        # Apply safety limits
-        lower_bound = max(current_runs, final_pred - mae)
-        upper_bound = min(300, final_pred + mae)
+        # Apply safety limits with a tighter mathematical spread 
+        lower_bound = max(current_runs, final_pred - (mae / 2.0))
+        upper_bound = min(300, final_pred + (mae / 2.0))
         
         if mae > 25: conf = "Low"
         elif mae >= 15: conf = "Medium"
@@ -688,20 +686,7 @@ if app_mode == "🟢 Live Match Sync":
             elif m_type == "warning": st.warning(txt)
             del st.session_state['sync_msg']
 
-        # Double-Header Match Selector
-        if len(st.session_state.get('available_matches', [])) > 1:
-            match_titles = [m['title'] for m in st.session_state['available_matches']]
-            current_title = st.session_state.get('last_synced_match', {}).get('title', match_titles[0])
-            try:
-                default_idx = match_titles.index(current_title)
-            except:
-                default_idx = 0
-                
-            st.selectbox("🏏 Select Active Match", 
-                        options=match_titles, 
-                        index=default_idx,
-                        key='match_selector_key',
-                        on_change=on_match_selection_change)
+        # Removed Double Header dropdown, automatically parsing index 0 (latest)
 
         # Render the scorecard if match data exists
         if 'last_synced_match' in st.session_state:

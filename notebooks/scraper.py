@@ -39,13 +39,12 @@ def get_live_ipl_matches():
         today_str = now_ist.strftime("%Y-%m-%d")
         yesterday_str = (now_ist - timedelta(days=1)).strftime("%Y-%m-%d")
         
-        # Collect all IPL matches from today or yesterday
+        # Collect all IPL matches
         candidate_matches = []
         for match in matches:
             match_name = match.get('name', '')
-            match_date = match.get('date', '')
             
-            if "Indian Premier League" in match_name and match_date in [today_str, yesterday_str]:
+            if "Indian Premier League" in match_name:
                 candidate_matches.append(match)
 
         # Sort candidate matches by dateTimeGMT (latest first)
