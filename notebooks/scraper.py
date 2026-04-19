@@ -78,7 +78,7 @@ def get_live_ipl_matches():
                     
                     inning_name = s1.get('inning', '')
                     for t in teams:
-                        if t in inning_name:
+                        if t.lower() in inning_name.lower():
                             batting_team = t
                             bowling_team = teams[1] if teams[0] == t else teams[0]
                             break
@@ -86,6 +86,13 @@ def get_live_ipl_matches():
                 elif len(scores) == 1:
                     s0 = scores[0]
                     summary = f"{s0.get('r')}-{s0.get('w')} ({s0.get('o')})"
+                    
+                    inning_name = s0.get('inning', '')
+                    for t in teams:
+                        if t.lower() in inning_name.lower():
+                            batting_team = t
+                            bowling_team = teams[1] if teams[0] == t else teams[0]
+                            break
                 else:
                     summary = "Details Pending"
                 

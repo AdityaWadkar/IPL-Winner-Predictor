@@ -380,8 +380,8 @@ def render_scorecard(match):
     # Process scores for both teams
     team_scores = []
     for i, team in enumerate(teams):
-        # Find if this team has a score in the raw list
-        score_data = next((s for s in scores if team in s.get('inning', '')), None)
+        # Find if this team has a score in the raw list (Case insensitive)
+        score_data = next((s for s in scores if team.lower() in s.get('inning', '').lower()), None)
         if score_data:
             r = score_data.get('r', 0)
             w = score_data.get('w', 0)
@@ -446,10 +446,17 @@ def predict_first_innings_score(match):
     teams = match.get('teams', [])
     if not teams or len(teams) < 2: return None
     
-    batting_team = TEAM_MAP.get(teams[0], teams[0])
-    bowling_team = TEAM_MAP.get(teams[1], teams[1])
+    raw_bat_team = match.get('current_batting_team')
+    raw_bowl_team = match.get('current_bowling_team')
     
-    score_data = next((s for s in scores if teams[0] in s.get('inning', '')), None)
+    if not raw_bat_team or not raw_bowl_team:
+        raw_bat_team = teams[0]
+        raw_bowl_team = teams[1]
+        
+    batting_team = TEAM_MAP.get(raw_bat_team, raw_bat_team)
+    bowling_team = TEAM_MAP.get(raw_bowl_team, raw_bowl_team)
+    
+    score_data = next((s for s in scores if raw_bat_team.lower() in s.get('inning', '').lower()), None)
     if not score_data: return None
     
     try:
