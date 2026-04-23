@@ -466,6 +466,13 @@ def predict_first_innings_score(match):
     except:
         return None
         
+    status = match.get('status', '').lower()
+    if 'break' in status:
+        return None
+        
+    if overs_played >= 20.0 or wickets_lost >= 10.0:
+        return None  # First innings is completed
+        
     if overs_played < 2.0:
         return None  # Too early for a reliable momentum prediction
         
